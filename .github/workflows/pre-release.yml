@@ -1,0 +1,41 @@
+name: Pre-Release
+
+on:
+  pull_request_target:
+    types:
+      - closed
+    branches:
+      - "main"
+
+jobs:
+  incremental_tag_and_release_build:
+    if: startsWith(github.head_ref, 'release/') && github.event.pull_request.merged == true
+    permissions:
+      contents: write # for release-drafter/release-drafter to create a github release
+      pull-requests: write # for release-drafter/release-drafter to add label to PR
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".node-version"
+      - name: Get Tags
+        id: tags
+        run: |
+          git fetch --tags
+          echo "Tags fetched"      
+      - name: Get Latest Tag
+        id: latest-tag
+        run: |
+          LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+      - name: Publish a release // for prd
+        id: release_drafter
+        uses: release-drafter/release-drafter@v5
+        with:
+          prerelease: false
+          publish: true
+          tag: $LATEST_TAG
